@@ -9,27 +9,16 @@ window.onload = function(){
     				"LOSE":{"content":"BOOM! You lose.","class":"alert alert-danger"}};
 
 	var colorValues = {1:'#0066ff',2:'#009933',3:'#ff3300',4:'#002699',5:'#cc3300',6:'#ff6699',7:'#ffff00'};
+	var perimeterColorValues = {"mine":"#ffcccc","noMine":"#b1c9ef"};
+
+	var levels = [{"name":"Beginner","rows":7,"cols":7,"mines":10}, 
+				  {"name":"Intermediate","rows":15,"cols":15,"mines":40}, 
+				  {"name":"Expert","rows":15,"cols":29,"mines":99}];
 
 	Level = function(value){
-		switch(value) {
-			case "1":
-				this.name = "Beginner";
-				this.rows= 7;
-				this.cols= 7;		
-				this.mines = 10;
-				break
-			case "2":
-				this.name = "Intermediate";
-				this.rows= 15;
-				this.cols= 15;
-				this.mines = 40;
-				break
-			case "3":
-				this.name = "Expert";
-				this.rows= 15;
-				this.cols= 29;
-				this.mines = 99;
-				break					
+		for(var i = 0; levels.length; i++){
+			if(levels[i].name == value)
+				return levels[i];
 		}
 	}
 	
@@ -224,7 +213,7 @@ window.onload = function(){
 
 	Game.prototype.updateBoardBox = function(box){
 		cell = boardTable.rows[box.row].cells[box.col];
-		cell.innerHTML = box.value > 0 ? box.value : "";
+		cell.innerHTML = box.isEmpty() ? "" : box.value;
 		cell.style.color = colorValues[box.value];
 		cell.className = "safe";
 		cell.setAttribute("disabled",true);
@@ -330,7 +319,6 @@ window.onload = function(){
 				}
 				cell.className = "";
 				inputMines.value = minesRemaining +=1;
-
 			}
 		}		
 	}
@@ -341,13 +329,13 @@ window.onload = function(){
 			var col = cell.getAttribute("id");
 			var targetBox = game.board.get(row,col);
 			var perimeter = targetBox.perimeter;
-			var color =  targetBox.isAMine() ? "#ffcccc" : "#b1c9ef";
+			var color =  targetBox.isAMine() ? perimeterColorValues.mine: perimeterColorValues.noMine;
 			cell.setAttribute("bgcolor",color);
 
 			for(var i = 0; i< perimeter.length; i++){
 				var box = perimeter[i];
 				cell = boardTable.rows[box.row].cells[box.col];
-				color = box.isAMine() ? "#ffcccc" : "#b1c9ef";
+				color = box.isAMine() ? perimeterColorValues.mine: perimeterColorValues.noMine;
  				cell.setAttribute("bgColor", color);
 			}	
 		}	
@@ -368,6 +356,23 @@ window.onload = function(){
 		}		
 	}	
 
+	function loadLevels(){
+		for(var i = 0; i < levels.length ; i++){
+			var optionLevel = document.createElement('option');
+			optionLevel.value = levels[i].name;
+			optionLevel.innerHTML = levels[i].name;
+			inputLevel.appendChild(optionLevel);
+		}
+	}
+
+	function showMessage(message){
+		document.getElementById('messageModal').innerHTML = message.content;
+		document.getElementById('divMessage').className = message.class;
+		$('#modalMessage').modal('show');
+	};
+
+	loadLevels();
+	
 	btnStart.addEventListener("click", function(){
 		boardTable.innerHTML = "";
 		level = inputLevel.value;
@@ -375,15 +380,5 @@ window.onload = function(){
 		inputMines.value = game.board.level.mines;
 		$('#modalGame').modal('hide');
 	});
-
-	$("#btnPlay").click(function(){
-		$('#modalGame').modal('hide');
-	})
-
-	function showMessage(message){
-		document.getElementById('messageModal').innerHTML = message.content;
-		document.getElementById('divMessage').className = message.class;
-		$('#modalMessage').modal('show');
-	};
 	
 }
