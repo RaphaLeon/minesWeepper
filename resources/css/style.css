@@ -44,3 +44,10 @@ table tr, td {
     width:20px;
     height:20px;
 }
+.wronglyFlagged{
+	background-image: url('../images/flag.png');
+	background-size:cover;
+	background-color: #f9674d;
+    width:20px;
+    height:20px;
+}
