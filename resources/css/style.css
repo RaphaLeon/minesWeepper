@@ -18,14 +18,14 @@ table tr, td {
 	font-weight: bold;
 }
 .mine {
-	background-image: url('../images/mine2.png'); 
+	background-image: url('../images/mine.png');
 	background-size:cover;
-	background-color: #bfbfbf;
+	background-color: #d9d9d9; /*#bfbfbf;*/
     width:20px;
     height:20px;
 }
 .boom {
-	background-image: url('../images/boom5.png');
+	background-image: url('../images/boom.png');
 	background-size:cover;
 	background-color: #bfbfbf;
     width:20px;
@@ -38,7 +38,7 @@ table tr, td {
 	background-color: #bfbfbf; 
 }
 .flag{
-	background-image: url('../images/flag2.png');
+	background-image: url('../images/flag.png');
 	background-size:cover;
 	background-color: #bfbfbf;
     width:20px;
