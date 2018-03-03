@@ -1,17 +1,19 @@
 window.onload = function(){
-
+    var isFirstMove;
+    
+    const MINE = -1;
 	var boardTable  = document.getElementById("board");
 	var inputLevel  = document.getElementById("level");
 	var inputMines  = document.getElementById("mines");
 	var btnStart    = document.getElementById("btnStart");	
 
-    var messages = {"WIN":{"content":"Fuck yeah! You win this time.","class":"alert alert-success"},
+    var messages = {"WIN":{"content":"Fuck yeah! You win this time.","class":"alert alert-info"},
     				"LOSE":{"content":"BOOM! You lose.","class":"alert alert-danger"}};
 
 	var colorValues = {1:'#0066ff',2:'#009933',3:'#ff3300',4:'#002699',5:'#cc3300',6:'#ff6699',7:'#ffff00'};
 	var perimeterColorValues = {"mine":"#ffcccc","noMine":"#b1c9ef"};
 
-	var levels = [{"name":"Beginner","rows":7,"cols":7,"mines":10}, 
+	var levels = [{"name":"Beginner","rows":7,"cols":7,"mines":10},
 				  {"name":"Intermediate","rows":15,"cols":15,"mines":40}, 
 				  {"name":"Expert","rows":15,"cols":29,"mines":99}];
 
@@ -33,15 +35,17 @@ window.onload = function(){
 		this.col = col,
 		this.value = 0,
 		this.perimeter = [],
-		this.enable = true
+		this.isEnabled = true
+		this.isFlagged = false;
 
 		this.isAMine = function(){
-			return this.value == -1;
+			return this.value == MINE;
 		}
 
 		this.isEmpty = function(){
 			return this.value == 0;
 		}
+
 	}
 
 	Board.prototype.build = function(){	
@@ -51,23 +55,36 @@ window.onload = function(){
 				this.boxes[i][j] = new Box(i,j);
 			}
 		}			
-		this.setMines();
-		this.setPerimetersAndValues();
 	}
 	
 	Board.prototype.setMines = function(){
 		var minesRemaining = this.level.mines;
-		while(minesRemaining>0){
+		while(minesRemaining > 0){
 			var row = Math.floor((Math.random() * this.level.rows));
 			var col = Math.floor((Math.random() * this.level.cols));			
 
 			if(!this.get(row, col).isAMine()){
-				this.get(row, col).value = -1;
-				minesRemaining-=1;
+				this.get(row, col).value = MINE;
+				minesRemaining-= 1;
 			}
 		}		
 	}
 	
+	Board.prototype.setMinesFromBox = function(box){
+		var minesRemaining = this.level.mines;
+		while(minesRemaining > 0){
+			var row = Math.floor((Math.random() * this.level.rows));
+			var col = Math.floor((Math.random() * this.level.cols));			
+			if(box != this.get(row, col)){
+				if(!this.get(row, col).isAMine()){
+					this.get(row, col).value = MINE;
+					minesRemaining-= 1;
+				}
+			}
+		}
+		this.setPerimetersAndValues();		
+	}
+
 	Board.prototype.setPerimetersAndValues = function(){	
 		for(var i = 0; i <= this.level.rows ; i++){
 			for(var j = 0; j <= this.level.cols; j++){
@@ -149,11 +166,16 @@ window.onload = function(){
 	Game = function(level){
 		this.board = new Board(level);
 		this.showHelp = true;	
-		this.movesRemaining = this.getTotalSafBoxes();
+		this.movesRemaining = 0;
 		this.activeMines = this.board.level.mines;
 		this.buildBoard();	
 	}
 	
+	Game.prototype.start = function(boxTarget){
+		this.board.setMinesFromBox(boxTarget);
+		game.movesRemaining = game.getTotalSafBoxes();
+	}
+
 	Game.prototype.buildBoard = function(){
 		var boxes = this.board.getAll();
 		var showHelp = this.showHelp;
@@ -183,30 +205,28 @@ window.onload = function(){
 				});		
 			}
 		}
-		/*if(this.showHelp){
-			boardTable.removeAttribute('bgcolor');
-		}*/
 	}
 	
 	Game.prototype.getTotalSafBoxes = function(){
-		var totalBoxes = (this.board.level.rows+1) * (this.board.level.cols+1);
-		totalBoxes-= this.board.level.mines;
-		totalBoxes-= this.board.getAllByValue(0).length;
-		return totalBoxes;
+		var safesBoxes = (this.board.level.rows + 1) * (this.board.level.cols + 1);
+		safesBoxes-= this.board.level.mines;
+		safesBoxes-= this.board.getAllByValue(0).length;
+		return safesBoxes;
 	}
 
 	Game.prototype.getSafeBoxes = function(box){
-		box.enable = false;	
+		box.isEnabled = false;	
 		var perimeter = box.perimeter;
+		this.updateBoardBox(box);
 		for(var i = 0; i< perimeter.length; i++){
 			itrBox = perimeter[i];
 			this.updateBoardBox(itrBox);
 			if(!itrBox.isEmpty()){
-				if(itrBox.enable)
+				if(itrBox.isEnabled)
 					this.movesRemaining-=1;
-				itrBox.enable = false;
+				itrBox.isEnabled = false;
 			}
-			if(itrBox.isEmpty() && itrBox.enable)
+			if(itrBox.isEmpty() && itrBox.isEnabled)
 				this.getSafeBoxes(itrBox);	
 		}
 	}
@@ -226,7 +246,7 @@ window.onload = function(){
 			for(var j = 0; j < boxes[i].length; j++) {
 				var box = this.board.get(i,j);
 				var cell = boardTable.rows[i].cells[j];				
-				box.enable = false;
+				box.isEnabled = false;
 				if(!box.isAMine()){
 					cell.className = "over"; 
 					cell.innerHTML = box.value > 0 ? box.value : "";
@@ -240,11 +260,13 @@ window.onload = function(){
 		}
 	}
 
-	Game.prototype.showAllMines = function(){
-		var mines = this.board.getAllByValue(-1);
+	Game.prototype.showAllMinesNotFlagged = function(){
+		var mines = this.board.getAllByValue(MINE);
 		for (var i = 0; i < mines.length; i++) {
 			var box = mines[i];
-			boardTable.rows[box.row].cells[box.col].className = "mine"; 	
+			var cell = boardTable.rows[box.row].cells[box.col];
+			if(cell.className != "flag")
+				cell.className = "mine"; 	
 		}
 	}
 
@@ -254,7 +276,7 @@ window.onload = function(){
 			for(var j = 0; j < boxes[i].length; j++) {
 				var box = this.board.get(i,j);
 				var cell = boardTable.rows[i].cells[j];
-				box.enable = false;
+				box.isEnabled = false;
 				cell.setAttribute("disabled",true);
 			}
 		}			
@@ -265,13 +287,19 @@ window.onload = function(){
 		var col = cell.getAttribute("id");
 		var boxTarget = game.board.get(row,col);
 
+		if(isFirstMove){
+		   game.start(boxTarget);
+		   //game.movesRemaining = game.getTotalSafBoxes();
+		   isFirstMove = false;
+		}
+
 		if(cell.className == "flag"){
 			return;
 		}
-		if(boxTarget.enable){
+		if(boxTarget.isEnabled){
 			switch(boxTarget.value){
-				case -1: 
-					game.showAllMines(); //.showAllBoxes();
+				case MINE: 
+					game.showAllMinesNotFlagged(); //.showAllBoxes();
 					game.disableAllBoxes();
 					cell.className = "boom";
 					showMessage(messages.LOSE);
@@ -280,7 +308,7 @@ window.onload = function(){
 					game.getSafeBoxes(boxTarget);
 				break;
 				default:
-					boxTarget.enable = false;
+					boxTarget.isEnabled = false;
 					cell.className = "safe";
 					cell.style.color = colorValues[boxTarget.value];			
 					cell.innerHTML = boxTarget.value;	
@@ -300,22 +328,23 @@ window.onload = function(){
 		var boxTarget = game.board.get(row,col);
 		var minesRemaining = parseInt(inputMines.value);
 
-		if(boxTarget.enable){
+		if(boxTarget.isEnabled){
 			if(cell.className != "flag"){
 				if(boxTarget.isAMine()){
-					game.activeMines-=1;
+					game.activeMines-= 1;
 					if(game.activeMines == 0){
+						cell.className = "flag";
 						game.showAllBoxes();
 						showMessage(messages.WIN);
 					}
 				}
 				if(minesRemaining > 0){
 					cell.className = "flag";
-					inputMines.value = minesRemaining-1
+					inputMines.value = minesRemaining - 1;
 				}
 			}else{
 				if(boxTarget.isAMine()){
-					game.activeMines+=1;
+					game.activeMines+= 1;
 				}
 				cell.className = "";
 				inputMines.value = minesRemaining +=1;
@@ -374,6 +403,7 @@ window.onload = function(){
 	loadLevels();
 	
 	btnStart.addEventListener("click", function(){
+		isFirstMove = true;
 		boardTable.innerHTML = "";
 		level = inputLevel.value;
 	    game = new Game(level);
