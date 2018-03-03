@@ -46,6 +46,10 @@ window.onload = function(){
 			return this.value == 0;
 		}
 
+		this.setFlag = function(value){
+			this.isFlagged = value;
+		}
+
 	}
 
 	Board.prototype.build = function(){	
@@ -163,6 +167,18 @@ window.onload = function(){
 		return this.boxes[row][col];
 	}
 
+	Board.prototype.getAllFlagged = function(){
+		flaggedBoxes = new Array();
+
+		for(var i = 0; i < this.boxes.length; i++){
+			for(var j = 0; j < this.boxes[i].length; j++){		
+				if(this.boxes[i][j].isFlagged)
+					flaggedBoxes.push(this.boxes[i][j]);
+			}
+		}
+		return flaggedBoxes;
+	}
+
 	Game = function(level){
 		this.board = new Board(level);
 		this.showHelp = true;	
@@ -171,8 +187,8 @@ window.onload = function(){
 		this.buildBoard();	
 	}
 	
-	Game.prototype.start = function(boxTarget){
-		this.board.setMinesFromBox(boxTarget);
+	Game.prototype.start = function(targetBox){
+		this.board.setMinesFromBox(targetBox);
 		game.movesRemaining = game.getTotalSafBoxes();
 	}
 
@@ -270,6 +286,16 @@ window.onload = function(){
 		}
 	}
 
+	Game.prototype.showWronglyFlaggedBoxes = function(){
+		flaggedBoxes = this.board.getAllFlagged();
+		for(var i = 0; i < flaggedBoxes.length; i++){			
+			box = flaggedBoxes[i];
+			cell = boardTable.rows[box.row].cells[box.col]; 
+			if(cell.className == "flag" && !box.isAMine())
+				cell.className = "wronglyFlagged";
+		}
+	}
+
 	Game.prototype.disableAllBoxes = function(){
 		var boxes = this.board.getAll();		
 		for(var i = 0; i < boxes.length; i++) {
@@ -285,10 +311,10 @@ window.onload = function(){
 	function selectBox(cell){
 		var row = cell.parentElement.rowIndex;
 		var col = cell.getAttribute("id");
-		var boxTarget = game.board.get(row,col);
+		var targetBox = game.board.get(row,col);
 
 		if(isFirstMove){
-		   game.start(boxTarget);
+		   game.start(targetBox);
 		   //game.movesRemaining = game.getTotalSafBoxes();
 		   isFirstMove = false;
 		}
@@ -296,22 +322,23 @@ window.onload = function(){
 		if(cell.className == "flag"){
 			return;
 		}
-		if(boxTarget.isEnabled){
-			switch(boxTarget.value){
+		if(targetBox.isEnabled){
+			switch(targetBox.value){
 				case MINE: 
 					game.showAllMinesNotFlagged(); //.showAllBoxes();
 					game.disableAllBoxes();
+					game.showWronglyFlaggedBoxes();
 					cell.className = "boom";
 					showMessage(messages.LOSE);
 				break;
 				case 0: 	
-					game.getSafeBoxes(boxTarget);
+					game.getSafeBoxes(targetBox);
 				break;
 				default:
-					boxTarget.isEnabled = false;
+					targetBox.isEnabled = false;
 					cell.className = "safe";
-					cell.style.color = colorValues[boxTarget.value];			
-					cell.innerHTML = boxTarget.value;	
+					cell.style.color = colorValues[targetBox.value];			
+					cell.innerHTML = targetBox.value;	
 					game.movesRemaining-=1;
 				break;
 			}
@@ -325,12 +352,14 @@ window.onload = function(){
 	function setFlag(cell){
 		var row = cell.parentElement.rowIndex;
 		var col = cell.getAttribute("id");
-		var boxTarget = game.board.get(row,col);
+		var targetBox = game.board.get(row,col);
 		var minesRemaining = parseInt(inputMines.value);
 
-		if(boxTarget.isEnabled){
+		if(targetBox.isEnabled){
+
+			targetBox.isFlagged = !targetBox.isFlagged;
 			if(cell.className != "flag"){
-				if(boxTarget.isAMine()){
+				if(targetBox.isAMine()){
 					game.activeMines-= 1;
 					if(game.activeMines == 0){
 						cell.className = "flag";
@@ -343,7 +372,7 @@ window.onload = function(){
 					inputMines.value = minesRemaining - 1;
 				}
 			}else{
-				if(boxTarget.isAMine()){
+				if(targetBox.isAMine()){
 					game.activeMines+= 1;
 				}
 				cell.className = "";
@@ -358,7 +387,7 @@ window.onload = function(){
 			var col = cell.getAttribute("id");
 			var targetBox = game.board.get(row,col);
 			var perimeter = targetBox.perimeter;
-			var color =  targetBox.isAMine() ? perimeterColorValues.mine: perimeterColorValues.noMine;
+			var color =  targetBox.isAMine() ? perimeterColorValues.mine : perimeterColorValues.noMine;
 			cell.setAttribute("bgcolor",color);
 
 			for(var i = 0; i< perimeter.length; i++){
