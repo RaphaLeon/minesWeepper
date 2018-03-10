@@ -371,7 +371,7 @@ window.onload = function(){
 	function scanPerimeter(cell){
 		if(game.showHelp){
 			let row = cell.parentElement.rowIndex;
-			let col = cell.cellIndex; //getAttribute("id");
+			let col = cell.cellIndex; 
 			let targetBox = game.board.getBox(row, col);
 			let perimeter = targetBox.perimeter;
 			let color =  targetBox.isAMine() ? perimeterColorValues.mine : perimeterColorValues.noMine;
