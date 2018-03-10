@@ -1,10 +1,10 @@
 window.onload = function(){
     let isFirstMove;
-    
+	
     const MINE = -1;
 	let boardTable  = document.getElementById("board");
 	let inputLevel  = document.getElementById("level");
-	let inputMines  = document.getElementById("mines");
+	let spnTotalFlags = document.getElementById("spnTotalFlags");
 	let btnStart    = document.getElementById("btnStart");	
 
     let messages = {"WIN":{"content":"Fuck yeah! You win this time.","class":"alert alert-info"},
@@ -27,6 +27,7 @@ window.onload = function(){
 	Board = function(level){
 		this.level = new Level(level);	
 		this.boxes = new Array();
+		this.totalFlaggeds = 0;
 		this.build();
 	}
 	
@@ -67,8 +68,8 @@ window.onload = function(){
 			let row = Math.floor((Math.random() * this.level.rows));
 			let col = Math.floor((Math.random() * this.level.cols));			
 
-			if(!this.get(row, col).isAMine()){
-				this.get(row, col).value = MINE;
+			if(!this.getBox(row, col).isAMine()){
+				this.getBox(row, col).value = MINE;
 				minesRemaining-= 1;
 			}
 		}		
@@ -79,9 +80,9 @@ window.onload = function(){
 		while(minesRemaining > 0){
 			let row = Math.floor((Math.random() * this.level.rows));
 			let col = Math.floor((Math.random() * this.level.cols));			
-			if(box != this.get(row, col)){
-				if(!this.get(row, col).isAMine()){
-					this.get(row, col).value = MINE;
+			if(box != this.getBox(row, col)){
+				if(!this.getBox(row, col).isAMine()){
+					this.getBox(row, col).value = MINE;
 					minesRemaining-= 1;
 				}
 			}
@@ -92,7 +93,7 @@ window.onload = function(){
 	Board.prototype.setPerimetersAndValues = function(){	
 		for(let i = 0; i <= this.level.rows ; i++){
 			for(let j = 0; j <= this.level.cols; j++){
-				let box = this.get(i,j);
+				let box = this.getBox(i,j);
 				if(!box.isAMine()){
 					this.setPerimeter(box);
 					this.setValue(box);
@@ -127,8 +128,8 @@ window.onload = function(){
 		}
 
 		for(let i = rowFrom; i <= rowTo; i++){
-			for(let k = colFrom; k <= colTo; k++){
-				let itrBox = this.get(i, k);
+			for(let j = colFrom; j <= colTo; j++){
+				let itrBox = this.getBox(i, j);
 				if(itrBox != box)
 					box.perimeter.push(itrBox);
 			}		
@@ -149,17 +150,6 @@ window.onload = function(){
 		return this.boxes;
 	}
 
-	Board.prototype.getAll2 = function(){
-		result = new Array();
-		for(let i = 0; i < this.boxes.length; i++){
-			for(let j = 0; j < this.boxes[i].length; j++){			
-				result.push(this.boxes[i][j]);
-			}
-		}
-		return result;
-	}
-
-
 	Board.prototype.getAllByValue = function(value){
 		result = new Array();
 		for(let i = 0; i < this.boxes.length; i++){
@@ -172,7 +162,7 @@ window.onload = function(){
 		return result;
 	}
 	
-	Board.prototype.get = function(row, col){
+	Board.prototype.getBox = function(row, col){
 		return this.boxes[row][col];
 	}
 
@@ -192,7 +182,6 @@ window.onload = function(){
 		this.board = new Board(level);
 		this.showHelp = true;	
 		this.movesRemaining = 0;
-		this.activeMines = this.board.level.mines;
 		this.buildBoard();	
 	}
 	
@@ -238,7 +227,7 @@ window.onload = function(){
 		return safesBoxes;
 	}
 
-	Game.prototype.getSafeBoxes = function(box){
+	Game.prototype.showSafeBoxesAround = function(box){
 		box.isEnabled = false;	
 		let perimeter = box.perimeter;
 		this.updateBoardBox(box);
@@ -250,7 +239,7 @@ window.onload = function(){
 				itrBox.isEnabled = false;
 			}
 			if(itrBox.isEmpty() && itrBox.isEnabled)
-				this.getSafeBoxes(itrBox);	
+				this.showSafeBoxesAround(itrBox);	
 		}
 	}
 
@@ -267,7 +256,7 @@ window.onload = function(){
 		
 		for(let i = 0; i < boxes.length; i++) {
 			for(let j= 0; j < boxes[i].length; j++) {
-				let box = this.board.get(i,j);
+				let box = this.board.getBox(i,j);
 				let cell = boardTable.rows[i].cells[j];				
 				box.isEnabled = false;
 				if(!box.isAMine()){
@@ -307,7 +296,7 @@ window.onload = function(){
 		let boxes = this.board.getAll();		
 		for(let i = 0; i < boxes.length; i++) {
 			for(let j= 0; j < boxes[i].length; j++) {
-				let box = this.board.get(i,j);
+				let box = this.board.getBox(i,j);
 				let cell = boardTable.rows[i].cells[j];
 				box.isEnabled = false;
 				cell.setAttribute("disabled",true);
@@ -318,18 +307,18 @@ window.onload = function(){
 	function selectBox(cell){
 		let row = cell.parentElement.rowIndex;
 		let col = cell.getAttribute("id");
-		let targetBox = game.board.get(row,col);
+		let box = game.board.getBox(row,col);
 
 		if(isFirstMove){
-		   game.start(targetBox);
+		   game.start(box);
 		   isFirstMove = false;
 		}
 
-		if(targetBox.isFlagged)
+		if(box.isFlagged)
 			return;
 
-		if(targetBox.isEnabled){
-			switch(targetBox.value){
+		if(box.isEnabled){
+			switch(box.value){
 				case MINE: 
 					game.showAllMinesNotFlagged();
 					game.disableAllBoxes();
@@ -338,58 +327,52 @@ window.onload = function(){
 					showMessage(messages.LOSE);
 				break;
 				case 0: 	
-					game.getSafeBoxes(targetBox);
+					game.showSafeBoxesAround(box);
 				break;
 				default:
-					targetBox.isEnabled = false;
+					box.isEnabled = false;
 					cell.className = "safe";
-					cell.style.color = colorValues[targetBox.value];			
-					cell.innerHTML = targetBox.value;	
+					cell.style.color = colorValues[box.value];			
+					cell.innerHTML = box.value;	
 					game.movesRemaining-= 1;
 				break;
 			}
 			if(game.movesRemaining == 0){
 				showMessage(messages.WIN);
 				game.showAllBoxes();
+				game.board.totalFlaggeds = game.board.level.mines;
+				updateTotalFlagsIndicator();
 			}
 		}
 	}
 	
 	function setFlag(cell){
 		let row = cell.parentElement.rowIndex;
-		let col = cell.getAttribute("id");
-		let targetBox = game.board.get(row, col);
-
-		if(targetBox.isEnabled){
-			if(targetBox.isFlagged){
-				if(targetBox.isAMine())
-					game.activeMines+= 1;
-
+		let col = cell.cellIndex; 
+		let box = game.board.getBox(row, col);
+		
+		if(box.isEnabled){
+			if(box.isFlagged){
 				cell.className = "";
-				inputMines.value = game.activeMines;
+				game.board.totalFlaggeds-= 1;
 			}else{
-				if(targetBox.isAMine()){
-					game.activeMines-= 1;
-					if(game.activeMines == 0){
-						cell.className = "flag";
-						game.showAllBoxes();
-						showMessage(messages.WIN);
-					}
-				}
-				if(game.activeMines > 0){
-					cell.className = "flag";
-					inputMines.value = game.activeMines;
-				}
+				cell.className = "flag";
+				game.board.totalFlaggeds+= 1;
 			}
-			targetBox.isFlagged = !targetBox.isFlagged;
+			box.isFlagged = !box.isFlagged;
+			updateTotalFlagsIndicator();
 		}		
 	}
+
+	function updateTotalFlagsIndicator(flags){
+		spnTotalFlags.innerHTML = `${game.board.totalFlaggeds}/${game.board.level.mines}`;		
+	}	
 
 	function scanPerimeter(cell){
 		if(game.showHelp){
 			let row = cell.parentElement.rowIndex;
-			let col = cell.getAttribute("id");
-			let targetBox = game.board.get(row, col);
+			let col = cell.cellIndex; //getAttribute("id");
+			let targetBox = game.board.getBox(row, col);
 			let perimeter = targetBox.perimeter;
 			let color =  targetBox.isAMine() ? perimeterColorValues.mine : perimeterColorValues.noMine;
 			cell.setAttribute("bgcolor",color);
@@ -406,7 +389,7 @@ window.onload = function(){
 		if(game.showHelp){
 			let row = cell.parentElement.rowIndex;
 			let col = cell.getAttribute("id");
-			let targetBox = game.board.get(row,col);
+			let targetBox = game.board.getBox(row,col);
 			let perimeter = targetBox.perimeter;
 			cell.setAttribute("bgColor", "");
 			for(let box of perimeter){
@@ -435,10 +418,11 @@ window.onload = function(){
 	
 	btnStart.addEventListener("click", function(){
 		isFirstMove = true;
+		totalFlags = 0; 
 		boardTable.innerHTML = "";
 		level = inputLevel.value;
-	    game = new Game(level);
-		inputMines.value = game.board.level.mines;
+		game = new Game(level);
+		updateTotalFlagsIndicator();
 		$('#modalGame').modal('hide');
 	});
 	
