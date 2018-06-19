@@ -1,6 +1,8 @@
 window.onload = function(){
     let isFirstMove;
 	
+	let config = {showHelp: true}
+
     const MINE = -1;
 	let boardTable  = document.getElementById("board");
 	let inputLevel  = document.getElementById("level");
@@ -11,7 +13,7 @@ window.onload = function(){
     				"LOSE":{"content":"BOOM! You lose.","class":"alert alert-danger"}};
 
 	let colorValues = {1:'#0066ff',2:'#009933',3:'#ff3300',4:'#002699',5:'#cc3300',6:'#ff6699',7:'#ffff00'};
-	let perimeterColorValues = {"mine":"#ffcccc","noMine":"#b1c9ef"};
+	let perimeterColorValues = {"mine":"#ffd6cc","noMine":"#e6ffe6"};
 
 	let levels = [{"name":"Beginner","rows":7,"cols":7,"mines":10},
 				  {"name":"Intermediate","rows":15,"cols":15,"mines":40}, 
@@ -180,7 +182,6 @@ window.onload = function(){
 
 	Game = function(level){
 		this.board = new Board(level);
-		this.showHelp = true;	
 		this.movesRemaining = 0;
 		this.buildBoard();	
 	}
@@ -192,7 +193,6 @@ window.onload = function(){
 
 	Game.prototype.buildBoard = function(){
 		let boxes = this.board.getAll();
-		let showHelp = this.showHelp;
 
 		for(let i = 0; i < boxes.length ; i++){
 			let row = boardTable.insertRow(i);
@@ -248,7 +248,7 @@ window.onload = function(){
 		cell.innerHTML = box.isEmpty() ? "" : box.value;
 		cell.style.color = colorValues[box.value];
 		cell.className = "safe";
-		cell.setAttribute("disabled",true);
+		cell.setAttribute("disabled", true);
 	}
 
 	Game.prototype.showAllBoxes = function(){
@@ -311,7 +311,7 @@ window.onload = function(){
 
 		if(isFirstMove){
 		   game.start(box);
-		   isFirstMove = false;
+		   isFirstMove = false;	
 		}
 
 		if(box.isFlagged)
@@ -369,7 +369,7 @@ window.onload = function(){
 	}	
 
 	function scanPerimeter(cell){
-		if(game.showHelp){
+		if(config.showHelp){
 			let row = cell.parentElement.rowIndex;
 			let col = cell.cellIndex; 
 			let targetBox = game.board.getBox(row, col);
@@ -380,13 +380,13 @@ window.onload = function(){
 			for(let box of perimeter){
 				cell = boardTable.rows[box.row].cells[box.col];
 				color = box.isAMine() ? perimeterColorValues.mine: perimeterColorValues.noMine;
- 				cell.setAttribute("bgColor", color);
+				 cell.setAttribute("bgColor", color);
 			}	
 		}	
 	}
 	
 	function hidePerimeter(cell){
-		if(game.showHelp){
+		if(config.showHelp){
 			let row = cell.parentElement.rowIndex;
 			let col = cell.getAttribute("id");
 			let targetBox = game.board.getBox(row,col);
@@ -422,6 +422,11 @@ window.onload = function(){
 		boardTable.innerHTML = "";
 		level = inputLevel.value;
 		game = new Game(level);
+
+		if(!config.showHelp)
+			$('table tr td').css('background-color', '#d9d9d9')
+			//$('.test tr td').css('background-color', '#d9d9d9');
+
 		updateTotalFlagsIndicator();
 		$('#modalGame').modal('hide');
 	});
