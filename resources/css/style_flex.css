@@ -1,0 +1,90 @@
+.board {
+    margin: 0 auto;
+    width: 80vw;
+    max-width: 60vh;
+    height: 80vw;
+    max-height: 60vh;
+    font-size: 1rem;
+}
+
+.board-row {
+    display: flex;
+    height: 2.8vw;
+}
+
+.box-original {
+    background: gray;
+    margin: 0.5px;
+    color: white;
+    font-weight: bold;
+    flex: 1 0 auto;
+    position: relative;
+    justify-content: center;
+    align-items: center;
+}
+
+.box {
+    background: #e8dfdd;
+    /*margin: 1px;*/
+    font-weight: bold;
+    width: 3vw;
+    line-height: 2.5vw;
+    text-align: center;
+    border-style: groove;
+}
+
+.box:after {
+    /*content: "";*/
+    float: left;
+    display: block;
+    padding-top: 100%;
+}
+
+.box .inner {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.over {
+    background-color: #bfbfbf;
+    color: red;
+    font-weight: bold;
+}
+
+.mine {
+    background-image: url('../images/mine.png');
+    background-size: cover;
+    background-color: #d9d9d9;
+}
+
+.boom {
+    background-image: url('../images/boom.png');
+    background-size: cover;
+    background-color: #bfbfbf;
+    ;
+}
+
+.safe {
+    font-size: 1.5rem;
+    /*1.2em*/
+    font-weight: bold;
+    background-color: #bfbfbf;
+}
+
+.flag {
+    background-image: url('../images/flag.png');
+    background-size: cover;
+    background-color: #bfbfbf;
+}
+
+.wronglyFlagged {
+    background-image: url('../images/flag.png');
+    background-size: cover;
+    background-color: #f9674d;
+}
