@@ -1,6 +1,6 @@
 window.onload = function() {
     let isFirstMove;
-    let config = { showHelp: false }
+    let config = { showHelp: true };
     const MINE = -1;
     let boardTable = document.getElementById("board");
     let inputLevel = document.getElementById("level");
@@ -8,45 +8,45 @@ window.onload = function() {
     let btnStart = document.getElementById("btnStart");
 
     let messages = {
-        "WIN": { "content": "Fuck yeah! You win this time.", "class": "alert alert-info" },
-        "LOSE": { "content": "BOOM! You lose.", "class": "alert alert-danger" }
+        WIN: { content: "Fuck yeah! You win this time.", class: "alert alert-info" },
+        LOSE: { content: "BOOM! You lose.", class: "alert alert-danger" }
     };
 
-    let colorValues = { 1: '#0066ff', 2: '#009933', 3: '#ff3300', 4: '#002699', 5: '#cc3300', 6: '#ff6699', 7: '#ffff00' };
-    let perimeterColorValues = { "mine": "#ffd6cc", "noMine": "#e6ffe6" };
+    let colorValues = { "1": "#0066ff", "2": "#009933", "3": "#ff3300", "4": "#002699", "5": "#cc3300", "6": "#ff6699", "7": "#ffff00" };
+    let perimeterColorValues = { mine: "#ffd6cc", noMine: "#e6ffe6" };
 
     let levels = [
-        { "name": "Beginner", "rows": 7, "cols": 7, "mines": 10 },
-        { "name": "Intermediate", "rows": 15, "cols": 15, "mines": 40 },
-        { "name": "Expert", "rows": 15, "cols": 29, "mines": 99 }
+        { name: "Beginner", rows: 7, cols: 7, mines: 10 },
+        { name: "Intermediate", rows: 15, cols: 15, mines: 40 },
+        { name: "Expert", rows: 15, cols: 29, mines: 99 }
     ];
 
-    Board = function(level) {
-        this.level = level;
-        this.boxes = [];
-        this.totalFlaggeds = 0;
-        this.build();
-    }
-
     Box = function(row, col) {
-        this.row = row,
-            this.col = col,
-            this.value = 0,
-            this.isEnabled = true
+        this.row = row;
+        this.col = col;
+        this.value = 0;
+        this.isEnabled = true;
         this.isFlagged = false;
 
         this.isAMine = function() {
-            return this.value == MINE;
+            return this.value === MINE;
         }
 
         this.isEmpty = function() {
-            return this.value == 0;
+            return this.value === 0;
         }
 
         this.setFlag = function(value) {
             this.isFlagged = value;
         }
 
+    }
+
+    Board = function(level) {
+        this.level = level;
+        this.boxes = [];
+        this.totalFlaggeds = 0;
+        this.build();
     }
 
     Board.prototype.build = function() {
@@ -88,10 +88,10 @@ window.onload = function() {
         let rowFrom, rowTo, colFrom, colTo;
         let perimeter = [];
 
-        if (box.row == 0) {
+        if (box.row === 0) {
             rowFrom = box.row;
             rowTo = box.row + 1;
-        } else if (box.row == this.level.rows) {
+        } else if (box.row === this.level.rows) {
             rowFrom = box.row - 1;
             rowTo = box.row;
         } else {
@@ -99,10 +99,10 @@ window.onload = function() {
             rowTo = box.row + 1;
         }
 
-        if (box.col == 0) {
+        if (box.col === 0) {
             colFrom = box.col;
             colTo = box.col + 1;
-        } else if (box.col == this.level.cols) {
+        } else if (box.col === this.level.cols) {
             colFrom = box.col - 1;
             colTo = box.col;
         } else {
@@ -117,7 +117,6 @@ window.onload = function() {
                     perimeter.push(itrBox);
             }
         }
-
         return perimeter;
     }
 
@@ -126,15 +125,11 @@ window.onload = function() {
     }
 
     Board.prototype.getAllByValue = function(value) {
-        result = new Array();
+        let boxes = [];
         for (let i = 0; i < this.boxes.length; i++) {
-            for (let j = 0; j < this.boxes[i].length; j++) {
-                if (this.boxes[i][j].value == value) {
-                    result.push(this.boxes[i][j]);
-                }
-            }
+            boxes = boxes.concat(this.boxes[i].filter(row => row.value === value));
         }
-        return result;
+        return boxes;
     }
 
     Board.prototype.getBox = function(row, col) {
@@ -142,7 +137,7 @@ window.onload = function() {
     }
 
     Board.prototype.getAllFlagged = function() {
-        flaggedBoxes = new Array();
+        let flaggedBoxes = [];
 
         for (let i = 0; i < this.boxes.length; i++) {
             for (let j = 0; j < this.boxes[i].length; j++) {
@@ -169,13 +164,13 @@ window.onload = function() {
         let boxes = this.board.getAll();
 
         for (let i = 0; i < boxes.length; i++) {
-            let div = document.createElement('div');
-            div.className = 'board-row';
-            div.setAttribute('id', i);
+            let div = document.createElement("div");
+            div.className = "board-row";
+            div.id = i;
             for (let j = 0; j < boxes[i].length; j++) {
-                let cell = document.createElement('div');
-                cell.setAttribute('id', j);
-                cell.className = 'box';
+                let cell = document.createElement("div");
+                cell.id = j;
+                cell.className = "box";
 
                 cell.addEventListener("click", function(e) {
                     selectBox(this);
@@ -229,7 +224,7 @@ window.onload = function() {
         cell.innerHTML = box.isEmpty() ? "" : box.value;
         cell.style.color = colorValues[box.value];
         cell.classList.add("safe");
-        cell.setAttribute("disabled", true);
+        cell.disabled = "true";
     }
 
     Game.prototype.showAllBoxes = function() {
@@ -246,7 +241,7 @@ window.onload = function() {
                     cell.style.color = colorValues[box.value];
                 } else {
                     if (!cell.classList.contains("flag"))
-                        cell.classList.add(game.movesRemaining == 0 ? " flag" : " mine");
+                        cell.classList.add(game.movesRemaining === 0 ? "flag" : "mine");
 
                 }
             }
@@ -255,9 +250,9 @@ window.onload = function() {
 
     Game.prototype.showAllMinesNotFlagged = function() {
         let mines = this.board.getAllByValue(MINE);
-
-        for (let box of mines) {
-            let cell = getBoxFromHTML(box.row, box.col);
+        
+        for (let i = 0, len = mines.length; i < len; i++) {
+            let cell = getBoxFromHTML(mines[i].row, mines[i].col);
             if (!cell.classList.contains("flag"))
                 cell.classList.add("mine");
         }
@@ -266,9 +261,9 @@ window.onload = function() {
     Game.prototype.showWronglyFlaggedBoxes = function() {
         let flaggedBoxes = this.board.getAllFlagged();
 
-        for (let box of flaggedBoxes) {
-            cell = getBoxFromHTML(box.row, box.col);
-            if (cell.classList.contains("flag") && !box.isAMine())
+        for (let i = 0, len = flaggedBoxes.length; i < len; i++) {
+            cell = getBoxFromHTML(flaggedBoxes[i].row, flaggedBoxes[i].col);
+            if (cell.classList.contains("flag") && !flaggedBoxes[i].isAMine())
                 cell.classList.add("wronglyFlagged");
         }
     }
@@ -280,7 +275,7 @@ window.onload = function() {
                 let box = this.board.getBox(i, j);
                 let cell = getBoxFromHTML(i, j);
                 box.isEnabled = false;
-                cell.setAttribute("disabled", true);
+                cell.disabled = true;
             }
         }
     }
@@ -322,9 +317,9 @@ window.onload = function() {
                     game.movesRemaining -= 1;
                     break;
             }
-            if (game.movesRemaining == 0) {
-                showMessage(messages.WIN);
+            if (game.movesRemaining === 0) {
                 game.showAllBoxes();
+                showMessage(messages.WIN);
                 game.board.totalFlaggeds = game.board.level.mines;
                 updateTotalFlagsIndicator();
             }
@@ -361,9 +356,9 @@ window.onload = function() {
         let color = targetBox.isAMine() ? perimeterColorValues.mine : perimeterColorValues.noMine;
         cell.style.backgroundColor = color;
 
-        for (let box of perimeter) {
-            cell = getBoxFromHTML(box.row, box.col);
-            color = box.isAMine() ? perimeterColorValues.mine : perimeterColorValues.noMine;
+        for (let i = 0, len = perimeter.length; i < len; i++) {
+            cell = getBoxFromHTML(perimeter[i].row, perimeter[i].col);
+            color = perimeter[i].isAMine() ? perimeterColorValues.mine : perimeterColorValues.noMine;
             cell.style.backgroundColor = color;
         }
     }
@@ -382,14 +377,14 @@ window.onload = function() {
     }
 
     function showMessage(message) {
-        document.getElementById('messageModal').innerHTML = message.content;
-        document.getElementById('divMessage').className = message.class;
-        $('#modalMessage').modal('show');
+        document.getElementById("messageModal").innerHTML = message.content;
+        document.getElementById("divMessage").className = message.class;
+        $("#modalMessage").modal("show");
     };
 
     (function loadLevels() {
         for (let level of levels) {
-            let optionLevel = document.createElement('option');
+            let optionLevel = document.createElement("option");
             optionLevel.value = level.name;
             optionLevel.innerHTML = level.name;
             inputLevel.appendChild(optionLevel);
@@ -404,6 +399,6 @@ window.onload = function() {
         level = levels.find(level => level.name === inputLevel.value);
         game = new Game(level);
         updateTotalFlagsIndicator();
-        $('#modalGame').modal('hide');
+        $("#modalGame").modal("hide");
     });
 }
