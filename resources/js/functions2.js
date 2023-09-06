@@ -1,13 +1,13 @@
 window.onload = function () {
-	const config = { showHelp: true };
-	const MINE = -1;
-	const boardTable = document.getElementById('board');
+	const gameBoard = document.getElementById('board');
 	const inputLevel = document.getElementById('level');
 	const spnTotalFlags = document.getElementById('spnTotalFlags');
 	const endGameModal = document.getElementById('messageModal');
 	const endGameMessage = document.getElementById('divMessage');
-	const btnStart = document.getElementById('btnStart');
-
+	const retryModalBtn = document.getElementById('retry');
+	
+	const config = { showHelp: true };
+	const MINE = -1;
 	const colorValues = { '1': '#0066ff', '2': '#009933', '3': '#ff3300', '4': '#002699', '5': '#cc3300', '6': '#ff6699', '7': '#ffff00' };
 	const highlighColorValues = { mine: '#ffd6cc', safe: '#e6ffe6' };
 	const messages = {
@@ -33,8 +33,6 @@ window.onload = function () {
 			this.#perimeter = perimeter
 		}
 		
-		getPerimeter() { return this.#perimeter }
-		
 		isAMine() { return this.#value === MINE }
 		
 		isEmpty() { return this.#value === 0; }
@@ -45,8 +43,10 @@ window.onload = function () {
 		
 		isEnable() { return this.#isEnable }
 		
-		disable() { this.#isEnable = false }
+		getPerimeter() { return this.#perimeter }
 		
+		disable() { this.#isEnable = false }
+
 		setUI(htmlCell) { this.htmlCell = htmlCell }
 		
 		toggleFlag() {
@@ -60,47 +60,53 @@ window.onload = function () {
 			if (!this.isEnable() || this.isFlagged()) return;
 
 			this.disable();
-
-			if (this.isAMine()) {
-				this.htmlCell.classList.add('boom');
-				return;
-			}
-
 			this.htmlCell.classList.add('safe');
 			this.htmlCell.style.color = colorValues[this.#value] || '';
 			this.htmlCell.innerHTML = this.#value > 0 ? this.#value : '';
 		}
 		
-		show(status = 'win') {
+		show(gameStatus) {
 			if (!this.isEnable()) return;
 
 			this.disable();
-
-			if (this.isAMine()) {
-				if (!this.isFlagged()) {
-					this.htmlCell.classList.add(status === 'win' ? 'flag' : 'mine');
-				}
+			if (this.isFlagged()) {
+				this.htmlCell.classList.add('wronglyFlagged');
 				return;
 			}
 
-			this.htmlCell.classList.add('over');
-
-			if (this.isFlagged()) {
-				this.htmlCell.classList.add('wronglyFlagged');
-			} else {
+			if (gameStatus === 'win') {
 				this.htmlCell.style.color = colorValues[this.#value];
 				this.htmlCell.innerHTML = this.#value > 0 ? this.#value : '';
 			}
 		}
 	
 		highlightOn() {
-			this.htmlCell.style.backgroundColor = this.isAMine()
-				? highlighColorValues.mine
-				: highlighColorValues.safe;
+			this.htmlCell.style.backgroundColor = this.isAMine() ? highlighColorValues.mine : highlighColorValues.safe;
 		}
 
 		highlightOff() {
 			this.htmlCell.style.backgroundColor = '';
+		}
+	}
+
+	class Mine extends Cell {
+		constructor(row, col, value, perimeter) {
+			super(row, col, value, perimeter)
+		}
+
+		open() {
+			if (!this.isEnable() || this.isFlagged()) return;
+			this.disable();
+			this.htmlCell.classList.add('boom');
+		}
+		
+		show(gameStatus) {
+			if (!this.isEnable()) return;
+			this.disable();
+
+			if (!this.isFlagged()) {
+				this.htmlCell.classList.add(gameStatus === 'win' ? 'flag' : 'mine');
+			}
 		}
 	}
 
@@ -111,47 +117,32 @@ window.onload = function () {
 			this.rows = rows;
 			this.cols = cols;
 			this.mines = mines;
-			this.build();
+			this.#build();
 		}
 		
-		build() {
-			const minesCoords = [
-				{ row: 2, col: 0 },
-				{ row: 1, col: 2 },
-				{ row: 4, col: 5 },
-				{ row: 5, col: 6 },
-				{ row: 4, col: 6 },
-				{ row: 2, col: 1 },
-				{ row: 2, col: 2 },
-				{ row: 0, col: 4 },
-				{ row: 4, col: 4 },
-				{ row: 3, col: 0 }
-			];//this.getMinesCoords();
-
-			const isMine = (coords) => minesCoords.some(mine => { 
-				return (mine.row + '_' + mine.col) === (coords.row + '_' + coords.col)
-			})
+		#build() {
+			const minesCoords = this.#getMinesCoords();
+			const isMine = ({ row, col }) => minesCoords.some(mine =>  mine.row === row && mine.col === col);
+			
 			for (let row = 0; row <= this.rows; row++) {
 				this.#cells.push([]);
 				for (let col = 0; col <= this.cols; col++) {
-					const perimeter = this.getCellPerimeterCoords({ row, col });
-					const value = isMine({ row, col }) ? MINE : perimeter.filter(isMine).length
+					const perimeter = this.#getCellPerimeterCoords({ row, col });
+					if (isMine({ row, col })) {
+						this.#cells[row][col] = new Mine(row, col, MINE, perimeter);
+						continue;	
+					}
+					const value = perimeter.filter(isMine).length
 					this.#cells[row][col] = new Cell(row, col, value, perimeter);
 				}
 			}
 		}
 
-		getRandomCellCoords() {
-			let row = Math.floor((Math.random() * this.rows));
-			let col = Math.floor((Math.random() * this.cols));
-			return { row, col };
-		}
-
-		getMinesCoords() {
+		#getMinesCoords() {
 			let minesRemaining = this.mines;
 			const minesCoords = {};
 			while (minesRemaining > 0) {
-				const { row, col } = this.getRandomCellCoords();
+				const { row, col } = this.#getRandomCellCoords();
 				if (!minesCoords[row + '_' + col]) {
 					minesCoords[row + '_' + col] = { row, col };
 					minesRemaining -= 1;
@@ -159,18 +150,20 @@ window.onload = function () {
 			}
 			return Object.values(minesCoords);
 		}
+		
+		#getRandomCellCoords() {
+			let row = Math.floor((Math.random() * this.rows));
+			let col = Math.floor((Math.random() * this.cols));
+			return { row, col };
+		}
 
-		getCellPerimeterCoords(cell) {
+		#getCellPerimeterCoords(cell) {
 			let perimeter = [];
 
 			const getLimits = (axe, MAX) => {
-				if (axe === 0) {
-					return { from: axe, to: axe + 1 };
-				}
-				if (axe === MAX) {
-					return { from: axe - 1, to: axe };
-				}
-				return { from: axe - 1, to: axe + 1 };
+				const from = axe - 1 >= 0 ? axe - 1 : axe; 
+				const to = axe + 1 <= MAX ? axe + 1: axe;
+				return { from, to };
 			};
 
 			const { from: rowFrom, to: rowTo } = getLimits(cell.row, this.rows);
@@ -186,14 +179,6 @@ window.onload = function () {
 			return perimeter;
 		}
 
-		getCellPerimeter(cell) {
-			return cell.getPerimeter().map(({ row, col }) => this.#cells[row][col]);
-		}
-
-		getAll() {
-			return this.#cells;
-		}
-
 		#getAllByCriteria(filetrFn) {
 			let result = [];
 			for (let cells of this.#cells) {
@@ -202,36 +187,39 @@ window.onload = function () {
 			return result;
 		}
 
-		getFlagged() {
-			return this.#getAllByCriteria(cell => cell.isFlagged());
+		getCellPerimeter(cell) {
+			return cell.getPerimeter().map(({ row, col }) => this.#cells[row][col]);
 		}
 
-		getMines() {
-			return this.#getAllByCriteria(cell => cell.isAMine());
+		getAll() {
+			return this.#cells;
 		}
 
 		getSafes() {
 			return this.#getAllByCriteria(cell => cell.isSafe());
 		}
 
+		getEnables() {
+			return this.#getAllByCriteria(cell => cell.isEnable());
+		}
 	}
 
 	class Game {
 		constructor(level) {
 			this.level = level;
 			this.board = new Board(level);
-			this.totalFlaggeds = 0;
 			this.start();
 		}
 		
 		start() {
+			this.totalFlaggeds = 0;
 			this.movesRemaining = this.board.getSafes().length;
-			this.buildBoard();
+			this.renderBoard();
 			this.updateTotalFlagsIndicator();
 		}
 
-		buildBoard() {
-			boardTable.innerHTML = ''
+		renderBoard() {
+			gameBoard.innerHTML = ''
 			this.board.getAll().forEach((row) => {
 				const rowDiv = document.createElement('div');
 				rowDiv.className = 'board-row';
@@ -260,7 +248,7 @@ window.onload = function () {
 					
 					rowDiv.appendChild(cellDiv);
 				});
-				boardTable.appendChild(rowDiv);
+				gameBoard.appendChild(rowDiv);
 			})
 		}
 
@@ -272,70 +260,62 @@ window.onload = function () {
 				return;
 			}
 
-			cell.open()
+			cell.open();
 			if (cell.isAMine()) {
-				this.showAllMinesNotFlagged();
-				this.showWronglyFlaggedCells();
-				this.disableAllCells();
-				showMessage(messages.LOSE);
+				this.showAllCells('lose');
+				this.showMessage(messages.LOSE);
 				return;
 			}
 
 
 			this.movesRemaining -= 1;
 			if (this.movesRemaining === 0) {
-				this.showAllCells();
+				this.showAllCells('win');
 				this.totalFlaggeds = this.level.mines;
 				this.updateTotalFlagsIndicator();
-				showMessage(messages.WIN);
+				this.showMessage(messages.WIN);
 			}
 		}
 
 		openPerimeterCells(cell) {
 			cell.open();
-			let perimeter = this.board.getCellPerimeter(cell)
+			let perimeter = this.board.getCellPerimeter(cell);
 			for (let itrCell of perimeter) {
 				if (!itrCell.isEnable()) continue;
 
 				if (itrCell.isEmpty()) {
 					this.openPerimeterCells(itrCell);
 				} else {
-					this.movesRemaining -= 1;
 					itrCell.open();
+					this.movesRemaining -= 1;
 				}
 			}
 		}
 
-		showAllCells() {
-			this.board.getAll().flat().forEach((cell) => cell.show('win'));
-		}
-
-		showAllMinesNotFlagged() {
-			this.board.getMines().forEach(mine =>	mine.show('lose'))
-		}
-
-		showWronglyFlaggedCells() {
-			this.board.getFlagged().forEach((cell) => cell.show());
-		}
-
-		disableAllCells() {
-			this.board.getAll().flat().forEach((cell) => cell.disable());
+		showAllCells(gameStatus) {
+			this.board.getEnables().forEach((cell) => cell.show(gameStatus));
 		}
 
 		setFlag(cell) {
-			if (cell.isEnable()) {
-				if (cell.isFlagged()) {
-					this.totalFlaggeds -= 1;
-				} else {
-					this.totalFlaggeds += 1;
-				}
-				cell.toggleFlag();
-				this.updateTotalFlagsIndicator();
-			}
+			if (!cell.isEnable()) return;
+			
+			if (cell.isFlagged()) {
+				this.totalFlaggeds -= 1;
+			} else {
+				this.totalFlaggeds += 1;
+			}  
+			cell.toggleFlag();
+			this.updateTotalFlagsIndicator();
 		}
 
 		updateTotalFlagsIndicator() {
 			spnTotalFlags.innerHTML = `${this.totalFlaggeds}/${this.level.mines}`;
+		}
+
+		showMessage(message) {
+			endGameModal.innerHTML = message.content;
+			endGameMessage.className = message.class;
+			$('#modalMessage').modal('show');
 		}
 
 		showPerimeter(cell) {
@@ -351,24 +331,13 @@ window.onload = function () {
 		}
 	}
 
-
-	function showMessage(message) {
-		endGameModal.innerHTML = message.content;
-		endGameMessage.className = message.class;
-		$('#modalMessage').modal('show');
-	};
-
-	(function loadLevels() {
-		for (let level of levels) {
-			let optionLevel = document.createElement('option');
-			optionLevel.value = level.name;
-			optionLevel.innerHTML = level.name;
-			inputLevel.appendChild(optionLevel);
-		}
-	})();
-
-	btnStart.addEventListener('click', function () {
+	function startGame() {
 		level = levels.find(level => level.name === inputLevel.value);
 		game = new Game(level);
-	});
+	}
+
+	inputLevel.addEventListener('change', startGame);
+	retryModalBtn.addEventListener('click', startGame);
+	  
+	startGame();
 }
