@@ -180,11 +180,7 @@ window.onload = function () {
 		}
 
 		#getAllByCriteria(filetrFn) {
-			let result = [];
-			for (let cells of this.#cells) {
-				result = result.concat(cells.filter(filetrFn));
-			};
-			return result;
+			return this.#cells.flat().filter(filetrFn);
 		}
 
 		getCellPerimeter(cell) {
@@ -255,19 +251,27 @@ window.onload = function () {
 		openCell(cell) {
 			if (!cell.isEnable() || cell.isFlagged()) return;
 
-			if (cell.isEmpty())	{
-				this.openPerimeterCells(cell)
-				return;
-			}
-
-			cell.open();
 			if (cell.isAMine()) {
-				this.showAllCells('lose');
-				this.showMessage(messages.LOSE);
+				this.openMine(cell);
 				return;
 			}
+			
+			if (cell.isSafe())	{
+				this.openSafe(cell);
+				return;
+			}
+			
+			this.openEmpty(cell);
+		}
 
+		openMine(cell) {
+			cell.open();
+			this.showAllCells('lose');
+			this.showMessage(messages.LOSE);
+		}
 
+		openSafe(cell) {
+			cell.open();
 			this.movesRemaining -= 1;
 			if (this.movesRemaining === 0) {
 				this.showAllCells('win');
@@ -277,35 +281,34 @@ window.onload = function () {
 			}
 		}
 
-		openPerimeterCells(cell) {
+		openEmpty(cell) {
 			cell.open();
 			let perimeter = this.board.getCellPerimeter(cell);
 			for (let itrCell of perimeter) {
 				if (!itrCell.isEnable()) continue;
 
 				if (itrCell.isEmpty()) {
-					this.openPerimeterCells(itrCell);
+					this.openEmpty(itrCell);
 				} else {
-					itrCell.open();
-					this.movesRemaining -= 1;
+					this.openSafe(itrCell);
 				}
 			}
+		}
+		
+		setFlag(cell) {
+			if (!cell.isEnable()) return;
+			
+			cell.toggleFlag();
+			if (cell.isFlagged()) {
+				this.totalFlaggeds += 1;
+			} else {
+				this.totalFlaggeds -= 1;
+			}  
+			this.updateTotalFlagsIndicator();
 		}
 
 		showAllCells(gameStatus) {
 			this.board.getEnables().forEach((cell) => cell.show(gameStatus));
-		}
-
-		setFlag(cell) {
-			if (!cell.isEnable()) return;
-			
-			if (cell.isFlagged()) {
-				this.totalFlaggeds -= 1;
-			} else {
-				this.totalFlaggeds += 1;
-			}  
-			cell.toggleFlag();
-			this.updateTotalFlagsIndicator();
 		}
 
 		updateTotalFlagsIndicator() {
@@ -320,9 +323,7 @@ window.onload = function () {
 
 		showPerimeter(cell) {
 			cell.highlightOn()
-			this.board.getCellPerimeter(cell)
-				.filter(cell => cell.isEnable())
-				.forEach(perimeterCell => perimeterCell.highlightOn());
+			this.board.getCellPerimeter(cell).forEach(perimeterCell => perimeterCell.highlightOn());
 		}
 
 		hidePerimeter(cell) {
